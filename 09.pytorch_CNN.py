@@ -45,7 +45,7 @@ class Net(nn.Module):
         x = F.relu(self.mp(self.conv2(x)))
         x = x.view(in_size, -1)  # flatten the tensor
         x = self.fc(x)
-        return F.log_softmax(x)
+        return F.log_softmax(x, dim = 1)
 
 
 model = Net()
@@ -73,13 +73,14 @@ def test():
     test_loss = 0
     correct = 0
     for data, target in test_loader:
-        data, target = Variable(data, volatile=True), Variable(target)
-        output = model(data)
-        # sum up batch loss
-        test_loss += F.nll_loss(output, target, size_average=False).data
-        # get the index of the max log-probability
-        pred = output.data.max(1, keepdim=True)[1]
-        correct += pred.eq(target.data.view_as(pred)).cpu().sum()
+        with torch.no_grad():
+            data, target = Variable(data), Variable(target)
+            output = model(data)
+            # sum up batch loss
+            test_loss += F.nll_loss(output, target, reduction = 'sum').data
+            # get the index of the max log-probability
+            pred = output.data.max(1, keepdim=True)[1]
+            correct += pred.eq(target.data.view_as(pred)).cpu().sum()
 
     test_loss /= len(test_loader.dataset)
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
